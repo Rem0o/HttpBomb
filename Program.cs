@@ -59,7 +59,7 @@ namespace HttpBomb
             Thread.Sleep(duration * ONE_SEC_MS);
         }
 
-        static Task MainThread(string url, Action onFail, Action onSuccess, int? timeout)
+        static Task MainThread(string url, Action onSuccess, Action onFail, int? timeout)
         {
             var client = new HttpClient();
             if (timeout.HasValue)
