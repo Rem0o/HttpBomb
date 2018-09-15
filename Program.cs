@@ -36,7 +36,7 @@ namespace HttpBomb
             urlOption.Validators.Add(new UrlValidator());
 
             var timeoutOption = app.Option<int>("-t|--timeout <SECONDS>", "[Optional] Http client timeout in seconds", CommandOptionType.SingleValue);
-            int? getTimeoutValue() => timeoutOption.HasValue()? new Nullable<int>(timeoutOption.ParsedValue) : null;
+            Func<int?> getTimeoutValue = () => timeoutOption.HasValue()? new Nullable<int>(timeoutOption.ParsedValue) : null;
 
             app.OnExecute(() => Execute(threadsOption.ParsedValue, durationOption.ParsedValue, urlOption.Value(), getTimeoutValue()));
 
@@ -51,12 +51,17 @@ namespace HttpBomb
             void incrementSuccess() => Interlocked.Increment(ref successCount);
             void incrementFail() => Interlocked.Increment(ref failCount);
 
-            long getSuccessCount() => successCount;
-            long getFailCount() => failCount;
+            Func<long> getSuccessCount = () => successCount;
+            Func<long> getFailCount = () => failCount;
+            
+            var stopWatch = Stopwatch.StartNew();
 
             Enumerable.Range(0, threads).ToList().ForEach(_ => Task.Run(() => MainThread(url, incrementSuccess, incrementFail, timeout)));
-            Task.Run(() => CounterThread(getSuccessCount, getFailCount));
+            Task.Run(() => CounterThread(stopWatch, getSuccessCount, getFailCount));
             Thread.Sleep(duration * ONE_SEC_MS);
+
+            stopWatch.Stop();
+            ShowResult(stopWatch, successCount, failCount);
         }
 
         static Task MainThread(string url, Action onSuccess, Action onFail, int? timeout)
@@ -74,12 +79,10 @@ namespace HttpBomb
                 });
         }
 
-        static void CounterThread(Func<long> getSuccessCount, Func<long> getFailCount)
+        static void CounterThread(Stopwatch sw, Func<long> getSuccessCount, Func<long> getFailCount)
         {
             long lastSuccessCount = 0;
             double lastSwTime = 0;
-
-            var sw = Stopwatch.StartNew();
           
             while(true){
                 Thread.Sleep(ONE_SEC_MS);
@@ -92,5 +95,12 @@ namespace HttpBomb
                 Console.WriteLine($"Success count: {getSuccessCount()}, Fail count: {getFailCount()}, Success/sec: {successRate} Req/sec");
             }
         }
+
+        private static void ShowResult(Stopwatch sw, long successCount, long failCount)
+        {
+            Console.WriteLine("");
+            Console.WriteLine($"Result: Total success: {successCount}, total fail: {failCount}, average success/second {((double)successCount/(sw.ElapsedMilliseconds/ONE_SEC_MS))}");
+        }
+
     }
 }
