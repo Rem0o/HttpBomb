@@ -48,15 +48,17 @@ namespace HttpBomb
             long successCount = 0;
             long failCount = 0;
 
-            void incrementSuccess() => Interlocked.Increment(ref successCount);
-            void incrementFail() => Interlocked.Increment(ref failCount);
+            Action incrementSuccess = () => Interlocked.Increment(ref successCount);
+            Action incrementFail = () => Interlocked.Increment(ref failCount);
 
             Func<long> getSuccessCount = () => successCount;
             Func<long> getFailCount = () => failCount;
             
             var stopWatch = Stopwatch.StartNew();
 
-            Enumerable.Range(0, threads).ToList().ForEach(_ => Task.Run(() => MainThread(url, incrementSuccess, incrementFail, timeout)));
+            Enumerable.Range(0, threads)
+                .ToList()
+                .ForEach(_ => Task.Run(async () => await MainThread(url, incrementSuccess, incrementFail, timeout)));
             Task.Run(() => CounterThread(stopWatch, getSuccessCount, getFailCount));
             Thread.Sleep(duration * ONE_SEC_MS);
 
@@ -64,14 +66,14 @@ namespace HttpBomb
             ShowResult(stopWatch, successCount, failCount);
         }
 
-        static Task MainThread(string url, Action onSuccess, Action onFail, int? timeout)
+        static async Task MainThread(string url, Action onSuccess, Action onFail, int? timeout)
         {
             var client = new HttpClient();
             if (timeout.HasValue)
                 client.Timeout = TimeSpan.FromSeconds(timeout.Value);
 
             while (true)
-                client.GetAsync(url).ContinueWith(t => {
+                await client.GetAsync(url).ContinueWith(t => {
                     if (t.IsCanceled || t.Result.StatusCode != HttpStatusCode.OK)
                         onFail();
                     else
@@ -85,14 +87,13 @@ namespace HttpBomb
             double lastSwTime = 0;
           
             while(true){
-                Thread.Sleep(ONE_SEC_MS);
-
                 var swTime = ((double)sw.Elapsed.TotalMilliseconds/ONE_SEC_MS);
                 var successRate  = (getSuccessCount() - lastSuccessCount) / (swTime - lastSwTime);
                 lastSuccessCount = getSuccessCount();
                 lastSwTime = swTime;
                 
                 Console.WriteLine($"Success count: {getSuccessCount()}, Fail count: {getFailCount()}, Success/sec: {successRate} Req/sec");
+                Thread.Sleep(ONE_SEC_MS);
             }
         }
 
@@ -101,6 +102,5 @@ namespace HttpBomb
             Console.WriteLine("");
             Console.WriteLine($"Result: Total success: {successCount}, total fail: {failCount}, average success/second {((double)successCount/(sw.ElapsedMilliseconds/ONE_SEC_MS))}");
         }
-
     }
 }
