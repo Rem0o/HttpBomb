@@ -26,21 +26,24 @@ namespace HttpBomb
             };
             app.HelpOption();
 
-            var threadsOption = app.Option<int>("-n|--number <N>", "Required. Number of threads to run", CommandOptionType.SingleValue);
+            var threadsOption = app.Option<int>("-n|--number <N>", "[Required] Number of threads to run", CommandOptionType.SingleValue);
             threadsOption.Validators.Add(new ThreadValidator());
 
-            var durationOption = app.Option<int>("-t|--time <SECONDS>", "Required. Time to run in seconds", CommandOptionType.SingleValue);
+            var durationOption = app.Option<int>("-d|--duration <SECONDS>", "[Required] Time to run in seconds", CommandOptionType.SingleValue);
             durationOption.Validators.Add(new DurationValidator());
 
-            var urlOption = app.Option("-u|--url <URL>", "Required. Url to hit", CommandOptionType.SingleValue);
+            var urlOption = app.Option("-u|--url <URL>", "[Required] Url to hit", CommandOptionType.SingleValue);
             urlOption.Validators.Add(new UrlValidator());
- 
-            app.OnExecute(Execute(threadsOption.ParsedValue, durationOption.ParsedValue, urlOption.Value()));
+
+            var timeoutOption = app.Option<int>("-t|--timeout <SECONDS>", "[Optional] Http client timeout in seconds", CommandOptionType.SingleValue);
+            int? getTimeoutValue() => timeoutOption.HasValue()? new Nullable<int>(timeoutOption.ParsedValue) : null;
+
+            app.OnExecute(() => Execute(threadsOption.ParsedValue, durationOption.ParsedValue, urlOption.Value(), getTimeoutValue()));
 
             app.Execute(args);
         }
 
-        static Action Execute(int threads, int duration, string url) => () => 
+        static void Execute(int threads, int duration, string url, int? timeout)
         {
             long successCount = 0;
             long failCount = 0;
@@ -51,15 +54,17 @@ namespace HttpBomb
             long getSuccessCount() => successCount;
             long getFailCount() => failCount;
 
-            Enumerable.Range(0, threads).ToList().ForEach(_ => Task.Run(() => MainThread(url, incrementSuccess, incrementFail)));
+            Enumerable.Range(0, threads).ToList().ForEach(_ => Task.Run(() => MainThread(url, incrementSuccess, incrementFail, timeout)));
             Task.Run(() => CounterThread(getSuccessCount, getFailCount));
             Thread.Sleep(duration * ONE_SEC_MS);
-        };
+        }
 
-
-        static Task MainThread(string url, Action onFail, Action onSuccess)
+        static Task MainThread(string url, Action onFail, Action onSuccess, int? timeout)
         {
-            var client = new HttpClient{Timeout = TimeSpan.FromSeconds(3)};
+            var client = new HttpClient();
+            if (timeout.HasValue)
+                client.Timeout = TimeSpan.FromSeconds(timeout.Value);
+
             while (true)
                 client.GetAsync(url).ContinueWith(t => {
                     if (t.IsCanceled || t.Result.StatusCode != HttpStatusCode.OK)
