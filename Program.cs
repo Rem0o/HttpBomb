@@ -90,7 +90,7 @@ namespace HttpBomb
                 var swTime = sw.Elapsed.TotalSeconds;
                 var successCount = getSuccessCount();
                 var failCount = getFailCount();
-                var successRate  = (successCount - lastSuccessCount) / (swTime - lastSwTime);
+                var successRate  = Math.Round((successCount - lastSuccessCount) / (swTime - lastSwTime), 2);
                 lastSuccessCount = successCount;
                 lastSwTime = swTime;
                 
@@ -102,7 +102,7 @@ namespace HttpBomb
         private static void ShowResult(Stopwatch sw, long successCount, long failCount)
         {
             Console.WriteLine("");
-            Console.WriteLine($"Result: Total success: {successCount}, total fail: {failCount}, average success/second {successCount/sw.Elapsed.TotalSeconds}");
+            Console.WriteLine($"Results: Total success: {successCount}, Total fail: {failCount}, Average success/second: {successCount/sw.Elapsed.TotalSeconds}");
         }
     }
 }
