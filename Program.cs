@@ -88,11 +88,13 @@ namespace HttpBomb
           
             while(true){
                 var swTime = sw.Elapsed.TotalSeconds;
-                var successRate  = (getSuccessCount() - lastSuccessCount) / (swTime - lastSwTime);
-                lastSuccessCount = getSuccessCount();
+                var successCount = getSuccessCount();
+                var failCount = getFailCount();
+                var successRate  = (successCount - lastSuccessCount) / (swTime - lastSwTime);
+                lastSuccessCount = successCount;
                 lastSwTime = swTime;
                 
-                Console.WriteLine($"Success count: {getSuccessCount()}, Fail count: {getFailCount()}, Success/sec: {successRate} Req/sec");
+                Console.WriteLine($"Success count: {successCount}, Fail count: {failCount}, Success/sec: {successRate} Req/sec");
                 Thread.Sleep(ONE_SEC_MS);
             }
         }

@@ -18,7 +18,7 @@ namespace HttpBomb.OptionValidators
             if (option.HasValue() && CheckURLValid(option.Value()))
                 return ValidationResult.Success;
             else
-                return new ValidationResult($"Value for -{option.ShortName}|--{option.LongName} is required and must be a valid url.");
+                return new ValidationResult($"Value for -{option.ShortName}|--{option.LongName} is required and must be a complete valid HTTP/HTTPS url.");
         }
     }
     
