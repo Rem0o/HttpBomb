@@ -56,9 +56,13 @@ namespace HttpBomb
             
             var stopWatch = Stopwatch.StartNew();
 
+            var client = new HttpClient();
+            if (timeout.HasValue)
+                client.Timeout = TimeSpan.FromSeconds(timeout.Value);
+
             Enumerable.Range(0, threads)
                 .ToList()
-                .ForEach(_ => Task.Run(async () => await MainThread(url, incrementSuccess, incrementFail, timeout)));
+                .ForEach(_ => Task.Run(async () => await MainThread(client, url, incrementSuccess, incrementFail)));
             Task.Run(() => CounterThread(stopWatch, getSuccessCount, getFailCount));
             Thread.Sleep(duration * ONE_SEC_MS);
 
@@ -66,12 +70,8 @@ namespace HttpBomb
             ShowResult(stopWatch, successCount, failCount);
         }
 
-        static async Task MainThread(string url, Action onSuccess, Action onFail, int? timeout)
+        static async Task MainThread(HttpClient client, string url, Action onSuccess, Action onFail)
         {
-            var client = new HttpClient();
-            if (timeout.HasValue)
-                client.Timeout = TimeSpan.FromSeconds(timeout.Value);
-
             while (true)
                 await client.GetAsync(url).ContinueWith(t => {
                     if (t.IsCanceled || t.Result.StatusCode != HttpStatusCode.OK)
