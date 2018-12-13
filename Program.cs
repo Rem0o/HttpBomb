@@ -16,7 +16,7 @@ namespace HttpBomb
 {
     class Program
     {
-        const int ONE_SEC_MS = 10000000; //Bad code
+        const int ONE_SEC_MS = 10000000; //Bad coding
 
         static void Main(string[] args)
         {
