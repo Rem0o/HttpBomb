@@ -16,8 +16,6 @@ namespace HttpBomb
 {
     class Program
     {
-        const int ONE_SEC_MS = 10000000; //Bad coding
-
         static void Main(string[] args)
         {
             var app = new CommandLineApplication(){
@@ -64,7 +62,7 @@ namespace HttpBomb
                 .ToList()
                 .ForEach(_ => Task.Run(async () => await MainThread(client, url, incrementSuccess, incrementFail)));
             Task.Run(() => CounterThread(stopWatch, getSuccessCount, getFailCount));
-            Thread.Sleep(duration * ONE_SEC_MS);
+            Thread.Sleep(TimeSpan.FromSeconds(duration));
 
             stopWatch.Stop();
             ShowResult(stopWatch, successCount, failCount);
@@ -95,7 +93,7 @@ namespace HttpBomb
                 lastSwTime = swTime;
                 
                 Console.WriteLine($"Success count: {successCount}, Fail count: {failCount}, Success/sec: {successRate} Req/sec");
-                Thread.Sleep(ONE_SEC_MS);
+                Thread.Sleep(TimeSpan.FromSeconds(1));
             }
         }
 
